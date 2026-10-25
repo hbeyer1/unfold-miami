@@ -1,0 +1,12 @@
+# personal photos and Google-derived data: local only, never committed
+data/
+source/
+work/
+reviews/
+__pycache__/
+.venv/
+.env
+.env.*
+*.mp4
+*.webm
+.DS_Store

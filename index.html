@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Unfold · Miami Beach</title>
+  <style>
+    :root { --ink: #e9e8f2; --dim: rgba(233, 232, 242, 0.5); --faint: rgba(233, 232, 242, 0.32); }
+    html, body { margin: 0; height: 100%; background: #000; color: var(--ink); overflow: hidden;
+                 font: 12px/1.45 -apple-system, "Helvetica Neue", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    canvas { display: block; touch-action: none; cursor: crosshair; }
+    button { font: inherit; color: inherit; }
+
+    #loading { position: fixed; left: 50%; top: 50%; width: 200px; transform: translate(-50%, -50%); text-align: center;
+               letter-spacing: 0.3em; text-transform: uppercase; font-size: 10px; color: var(--dim); transition: opacity 0.8s; }
+    #loading .track { height: 1px; background: rgba(255, 255, 255, 0.12); margin-top: 12px; }
+    #bar { height: 1px; width: 0; background: #cfd8ff; box-shadow: 0 0 8px #9fb4ff; transition: width 0.2s; }
+    #loading.gone { opacity: 0; }
+
+    #intro { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; opacity: 0; transition: opacity 1.8s; }
+    #intro.ready { opacity: 1; }
+    #intro.ready.gone { opacity: 0; }
+    #intro div { text-align: center; transform: translateY(-18vh); }
+    #intro h1 { margin: 0; font: 200 34px/1 "Helvetica Neue", -apple-system, sans-serif; letter-spacing: 0.5em; text-indent: 0.5em; }
+    #intro p { margin: 14px 0 0; color: var(--dim); letter-spacing: 0.18em; font-size: 11px; text-transform: uppercase; }
+
+    #caption { position: fixed; left: 0; right: 0; top: 13%; text-align: center; pointer-events: none; opacity: 0; transition: opacity 1.8s ease; }
+    #caption.show { opacity: 1; }
+    #caption h1 { margin: 0; font: 200 28px/1.2 "Helvetica Neue", -apple-system, sans-serif; letter-spacing: 0.3em; text-indent: 0.3em; text-shadow: 0 0 22px rgba(0, 0, 0, 0.9); }
+    #caption h1::after { content: ""; display: block; width: 26px; height: 1px; margin: 12px auto 0; background: #ffd9b0; box-shadow: 0 0 10px #ffb070; }
+    #caption p { margin: 10px 0 0; color: var(--dim); letter-spacing: 0.18em; font-size: 11px; text-transform: uppercase; }
+    #whisper { position: fixed; left: 0; right: 0; bottom: 104px; text-align: center; pointer-events: none; color: rgba(233, 232, 242, 0.66);
+               font: italic 300 14px/1.4 "Iowan Old Style", Georgia, serif; letter-spacing: 0.03em; opacity: 0; transition: opacity 1.2s ease;
+               text-shadow: 0 0 14px #000, 0 0 4px #000; padding: 0 24px; }
+    #whisper.show { opacity: 1; }
+
+    #gauge { position: fixed; right: 22px; top: 50%; transform: translateY(-50%); height: 170px; width: 120px; pointer-events: none; }
+    #gauge div { position: absolute; right: 0; display: flex; align-items: center; gap: 8px; transform: translateY(-50%);
+                 font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(233, 232, 242, 0.22); transition: color 0.8s; white-space: nowrap; }
+    #gauge div i { order: 2; display: block; width: 5px; height: 1px; background: currentColor; }
+    #gauge div.on { color: rgba(233, 232, 242, 0.85); text-shadow: 0 0 10px rgba(160, 180, 255, 0.5); }
+    #gauge b { position: absolute; right: -6px; width: 3px; height: 3px; margin-top: -1.5px; border-radius: 50%; background: #dfe6ff; box-shadow: 0 0 8px #9fb4ff; transition: top 0.15s linear; }
+    #gauge::after { content: ""; position: absolute; right: -5px; top: 0; bottom: 0; width: 1px; background: rgba(255, 255, 255, 0.08); }
+
+    #time { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); width: min(980px, calc(100vw - 32px)); }
+    #strip { display: flex; justify-content: center; align-items: flex-end; gap: 4px; overflow-x: auto; scrollbar-width: none; padding-top: 4px; }
+    #strip::-webkit-scrollbar { display: none; }
+    #strip button { flex: 0 0 auto; padding: 0; border: 0; background: none; cursor: pointer; opacity: 0.42; transition: opacity 0.4s, transform 0.4s; text-align: center; }
+    #strip button img { display: block; height: 38px; width: auto; border-radius: 2px; filter: saturate(0.55); }
+    #strip button small { display: block; font-size: 9px; color: var(--faint); letter-spacing: 0.05em; margin-top: 2px; font-variant-numeric: tabular-nums; }
+    #strip button:hover { opacity: 0.8; }
+    #strip button.on { opacity: 1; transform: translateY(-3px); }
+    #strip button.on img { filter: none; box-shadow: 0 0 0 1px rgba(255, 220, 180, 0.8), 0 0 14px rgba(255, 170, 110, 0.45); }
+    #strip button.on small { color: var(--ink); }
+    #strip .gap { flex: 0 0 14px; }
+    #readout { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 4px; font-size: 11px; letter-spacing: 0.06em;
+               color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    #clock { color: var(--ink); }
+    #play { background: none; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 10px; padding: 0 9px; font-size: 9px; color: var(--dim); cursor: pointer; line-height: 17px; }
+
+    #legend { position: fixed; left: 18px; top: 14px; color: var(--faint); font-size: 10.5px; line-height: 1.7; letter-spacing: 0.03em; }
+    #legend b { color: rgba(233, 232, 242, 0.72); font-weight: 500; }
+    #legend .t { color: rgba(233, 232, 242, 0.6); letter-spacing: 0.4em; font-size: 10px; margin-bottom: 4px; }
+    #links { position: fixed; right: 18px; top: 14px; font-size: 10.5px; letter-spacing: 0.05em; }
+    #links a { color: var(--faint); text-decoration: none; margin-left: 14px; }
+    #links a:hover { color: var(--ink); }
+
+    #labels .label { position: fixed; left: 0; top: 0; padding: 0 0 0 14px; background: none; border: 0; cursor: pointer; text-align: left; opacity: 0;
+                     letter-spacing: 0.16em; text-transform: uppercase; font-size: 10px; color: rgba(233, 232, 242, 0.8); text-shadow: 0 0 8px #000; margin-top: -7px; white-space: nowrap; }
+    #labels .label::before { content: ""; position: absolute; left: -2.5px; top: 4.5px; width: 5px; height: 5px; border-radius: 50%; background: #ffb98a; box-shadow: 0 0 8px #ff9a6a; }
+    #labels .label small { display: block; margin-top: 2px; letter-spacing: 0.08em; text-transform: none; font-size: 10px; color: rgba(233, 232, 242, 0.45); }
+
+    @media (max-width: 700px) { #legend, #gauge { display: none; } #strip button img { height: 28px; } }
+  </style>
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/" } }
+  </script>
+</head>
+<body>
+  <div id="loading"><span class="what">gathering the beach</span><div class="track"><div id="bar"></div></div></div>
+  <div id="intro"><div><h1>MIAMI BEACH</h1><p>7 May 2026 · 19:41 – 20:14 · a walk south at sunset</p></div></div>
+  <div id="labels"></div>
+  <div id="caption"></div>
+  <div id="whisper"></div>
+  <div id="gauge"></div>
+  <div id="time">
+    <div id="strip"></div>
+    <div id="readout"><span id="clock"></span><button id="play">❚❚</button><span id="place"></span></div>
+  </div>
+  <div id="legend">
+    <div class="t">UNFOLD · MIAMI BEACH</div>
+    <b>scroll</b> or <b>← →</b> through the photos · <b>P</b> play / pause · <b>1–3</b> a moment<br>
+    <b>drag</b> to look around · <b>shift-drag</b> to move · <b>shift-scroll</b>, <b>pinch</b> or <b>↑ ↓</b> closer, further<br>
+    <b>E</b> the photo's own eye · <b>F</b> let it frame the photo · <b>O</b> above it all · <b>rest the cursor</b> to fill a place in
+  </div>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
