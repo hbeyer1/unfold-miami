@@ -15,3 +15,20 @@ python3 serve.py        # http://localhost:8780
 
 The page reads `data/` (`env.bin`, `photos.bin`, `meta.json`, `hd/`, `thumbs/`), which `bake.py` writes from
 `source/`. Both hold personal photos and a Google-derived mesh, so they stay on this machine and are not in git.
+
+## Building it with Gemini 4 Argon
+
+`GEMINI.md` describes the project for Gemini (Gemini CLI reads it on its own). Each iteration has one goal: change the
+code, record the page, let Argon critique the recording against the goal, fix, record again.
+
+```sh
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt -r requirements-tools.txt
+export GEMINI_API_KEY=...            # in your own shell; never committed
+export ARGON_MODEL=...               # the Gemini 4 Argon model id, as AI Studio shows it
+python3 serve.py &
+.venv/bin/python tools/argon_review.py --goal "the photos condense out of the beach, not pop in" \
+    --keys "Digit1 ArrowRight ArrowRight KeyO" --allow-upload
+```
+
+The recording shows the personal photos as dots: `--allow-upload` sends it to Google. Without the flag the tool only
+records (`reviews/<time>/`) and writes the prompt it would send.

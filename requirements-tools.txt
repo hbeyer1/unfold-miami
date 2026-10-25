@@ -1,0 +1,4 @@
+google-genai
+playwright
+opencv-python
+numpy
